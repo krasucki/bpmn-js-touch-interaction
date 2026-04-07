@@ -1,0 +1,80 @@
+{
+  "name": "bpmn-js-touch-interaction",
+  "version": "0.1.0",
+  "description": "Restores tap, pan, pinch and drag gestures on touch devices for bpmn-js 18+",
+  "type": "module",
+  "main": "./dist/bpmn-js-touch-interaction.esm.js",
+  "module": "./dist/bpmn-js-touch-interaction.esm.js",
+  "exports": {
+    ".": {
+      "import": "./dist/bpmn-js-touch-interaction.esm.js",
+      "default": "./dist/bpmn-js-touch-interaction.esm.js"
+    },
+    "./style.css": "./dist/assets/touch-interaction.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rimraf dist",
+    "build": "rollup -c",
+    "all": "npm run lint && npm run test && npm run build",
+    "check:upstream": "node scripts/check-upstream.mjs",
+    "check:upstream:update": "node scripts/check-upstream.mjs --update",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run all"
+  },
+  "keywords": [
+    "bpmn-js",
+    "diagram-js",
+    "bpmn",
+    "touch",
+    "mobile",
+    "gesture",
+    "tablet",
+    "ios",
+    "android"
+  ],
+  "author": "Michał Krasucki",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krasucki/bpmn-js-touch-interaction.git"
+  },
+  "bugs": {
+    "url": "https://github.com/krasucki/bpmn-js-touch-interaction/issues"
+  },
+  "homepage": "https://github.com/krasucki/bpmn-js-touch-interaction#readme",
+  "peerDependencies": {
+    "bpmn-js": "^18.0.0",
+    "diagram-js": "^15.0.0",
+    "diagram-js-minimap": "^5.0.0",
+    "min-dom": "^5.0.0",
+    "tiny-svg": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "diagram-js-minimap": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-bpmn-io": "^2.2.0",
+    "happy-dom": "^20.8.4",
+    "rimraf": "^6.0.0",
+    "rollup": "^4.0.0",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-import-css": "^4.2.0",
+    "vitest": "^4.1.0"
+  }
+}

@@ -1,0 +1,30 @@
+/*
+ * bpmn-js-touch-interaction — styles
+ *
+ * Auto-imported by index.js. No host project setup required beyond importing
+ * the plugin module — these styles target diagram-js DOM classes directly.
+ */
+
+/*
+ * Prevent the browser from handling touch gestures (scroll, pinch-zoom, etc.)
+ * on the canvas and palette. Without this, the browser claims touch events
+ * before they reach the plugin, breaking pan and pinch.
+ *
+ * Applied unconditionally — `touch-action` is a no-op on mouse-only devices,
+ * so it does not affect desktop. On touch-primary devices it is required.
+ */
+.bjs-container,
+.bjs-container *,
+.djs-palette,
+.djs-palette * {
+  touch-action: none;
+}
+
+/*
+ * Visual feedback for active tool mode (connect / lasso / space).
+ * The .djs-touch-tool-active class is toggled on the canvas container by
+ * toolMode.js when the user taps a tool palette button.
+ */
+.djs-touch-tool-active .djs-svg {
+  cursor: crosshair;
+}
