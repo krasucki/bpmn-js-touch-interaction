@@ -1,6 +1,6 @@
 {
   "name": "bpmn-js-touch-interaction",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Restores tap, pan, pinch and drag gestures on touch devices for bpmn-js 18+",
   "type": "module",
   "main": "./dist/bpmn-js-touch-interaction.esm.js",
