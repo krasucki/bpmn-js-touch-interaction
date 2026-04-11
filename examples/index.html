@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<!--
+  bpmn-js-touch-interaction example
+
+  REQUIRES an HTTP server (ES modules won't load over file://).
+  From repo root:
+
+      npm run build        # build ../dist/ once
+      npm run example      # serves on http://localhost:8000
+
+  Then open: http://localhost:8000/examples/index.html
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>bpmn-js-touch-interaction · editor + viewer</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@18.14.0/dist/assets/diagram-js.css">
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@18.14.0/dist/assets/bpmn-font/css/bpmn-embedded.css">
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@18.14.0/dist/assets/bpmn-js.css">
+  <link rel="stylesheet" href="https://unpkg.com/diagram-js-minimap@5/assets/diagram-js-minimap.css">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1f2933;
+      background: #f5f7fa;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      flex: 0 0 auto;
+      padding: 8px 16px;
+      background: #1a202c;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+      flex: 1 1 auto;
+    }
+    header button {
+      background: #3182ce;
+      color: #fff;
+      border: 0;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    header button:hover { background: #2b6cb0; }
+    header button:active { background: #2c5282; }
+    .touch-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .touch-badge.active { background: #48bb78; color: #fff; }
+    .touch-badge.inactive { background: #ed8936; color: #fff; }
+    #inactive-hint {
+      display: none;
+      background: #fffaf0;
+      color: #744210;
+      padding: 8px 16px;
+      font-size: 12px;
+      line-height: 1.5;
+      border-bottom: 1px solid #f6ad55;
+    }
+    #inactive-hint.needs-reload { background: #fed7d7; color: #742a2a; border-color: #e53e3e; }
+    #inactive-hint code {
+      background: #2d3748;
+      color: #f7fafc;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+    #inactive-hint .desktop-msg, #inactive-hint .reload-msg { display: none; }
+    #inactive-hint:not(.needs-reload) .desktop-msg { display: inline; }
+    #inactive-hint.needs-reload .reload-msg { display: inline; }
+    #inactive-hint button {
+      background: #2d3748;
+      color: #fff;
+      border: 0;
+      padding: 4px 10px;
+      border-radius: 3px;
+      font-size: 12px;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .panels {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .panel {
+      flex: 1 1 50%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      border-bottom: 2px solid #cbd5e0;
+    }
+    .panel:last-child { border-bottom: none; }
+    .panel-label {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #4a5568;
+      background: #edf2f7;
+      border-bottom: 1px solid #cbd5e0;
+    }
+    .canvas {
+      flex: 1 1 auto;
+      position: relative;
+      min-height: 0;
+      background: #fff;
+    }
+    .status {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 4px 10px;
+      font-size: 11px;
+      color: #4a5568;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 10;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    #file-protocol-warning {
+      display: none;
+      padding: 20px;
+      margin: 20px;
+      background: #fff5f5;
+      border: 2px solid #e53e3e;
+      border-radius: 8px;
+      color: #742a2a;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    #file-protocol-warning h2 { margin: 0 0 12px; font-size: 16px; color: #c53030; }
+    #file-protocol-warning code {
+      background: #2d3748;
+      color: #f7fafc;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+    #file-protocol-warning pre {
+      background: #2d3748;
+      color: #f7fafc;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    .djs-minimap .toggle {
+      font-size: 0 !important;
+      width: 24px !important;
+      height: 24px !important;
+      padding: 0 !important;
+      min-width: 0 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      line-height: 1 !important;
+    }
+    .djs-minimap .toggle::before {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      content: '−';
+    }
+    .djs-minimap:not(.open) .toggle::before {
+      content: '+';
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "bpmn-js/lib/Modeler": "https://esm.sh/bpmn-js@18.14.0/lib/Modeler?bundle-deps",
+        "bpmn-js/lib/NavigatedViewer": "https://esm.sh/bpmn-js@18.14.0/lib/NavigatedViewer?bundle-deps",
+        "diagram-js/": "https://esm.sh/diagram-js@15.11.0/",
+        "diagram-js-minimap": "https://esm.sh/diagram-js-minimap@5?bundle-deps",
+        "min-dom": "https://esm.sh/min-dom@5",
+        "tiny-svg": "https://esm.sh/tiny-svg@4",
+        "bpmn-js-touch-interaction": "../dist/bpmn-js-touch-interaction.esm.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="file-protocol-warning">
+    <h2>⚠ This file must be served over HTTP</h2>
+    <p>ES modules and the <code>importmap</code> do not work when the page is opened via <code>file://</code>.</p>
+    <p>From the repository root, run:</p>
+    <pre>npm run build     # build ../dist/ once
+npm run example   # serves on http://localhost:8000</pre>
+    <p>Then open: <code>http://localhost:8000/examples/index.html</code></p>
+  </div>
+  <script>
+    if (location.protocol === 'file:') {
+      document.getElementById('file-protocol-warning').style.display = 'block';
+      document.documentElement.classList.add('file-protocol');
+    }
+  </script>
+  <header>
+    <h1>bpmn-js-touch-interaction · editor + viewer</h1>
+    <span id="touch-badge" class="touch-badge inactive">Touch: ?</span>
+    <button id="zoom-in" type="button" aria-label="Zoom in">Zoom +</button>
+    <button id="zoom-out" type="button" aria-label="Zoom out">Zoom −</button>
+    <button id="zoom-fit" type="button">Fit</button>
+    <button id="reset" type="button">Reset diagram</button>
+    <button id="toggle-minimap" type="button">Toggle minimap</button>
+  </header>
+  <div id="inactive-hint">
+    <span class="desktop-msg">
+      <strong>Plugin no-op:</strong> <code>(pointer: coarse)</code> is <code>false</code>.
+      To test on desktop, open DevTools → <strong>Toggle device toolbar</strong> (<code>Ctrl+Shift+M</code> / <code>⌘⇧M</code>), pick a phone preset, then <strong>reload</strong>.
+    </span>
+    <span class="reload-msg">
+      <strong>Reload required:</strong> plugin state was captured at page load and no longer matches <code>(pointer: coarse)</code>.
+      <button id="reload-btn" type="button">Reload</button>
+    </span>
+  </div>
+
+  <div class="panels">
+    <section class="panel">
+      <div class="panel-label">Modeler (touch + minimap)</div>
+      <div id="editor-canvas" class="canvas">
+        <div class="status" id="editor-status">Loading…</div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="panel-label">NavigatedViewer (auto-synced)</div>
+      <div id="viewer-canvas" class="canvas">
+        <div class="status" id="viewer-status">Loading…</div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import BpmnModeler from 'bpmn-js/lib/Modeler';
+    import BpmnNavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
+    import minimapModule from 'diagram-js-minimap';
+    import touchInteractionModule from 'bpmn-js-touch-interaction';
+
+    const INITIAL_DIAGRAM = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_1"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_1" name="Do work">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="180" y="80" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="186" y="123" width="24" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_1_di" bpmnElement="Task_1">
+        <dc:Bounds x="270" y="58" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="432" y="80" width="36" height="36"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="441" y="123" width="20" height="14"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="216" y="98"/>
+        <di:waypoint x="270" y="98"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="370" y="98"/>
+        <di:waypoint x="432" y="98"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+
+    const modeler = new BpmnModeler({
+      container: '#editor-canvas',
+      additionalModules: [touchInteractionModule, minimapModule],
+    });
+
+    const viewer = new BpmnNavigatedViewer({
+      container: '#viewer-canvas',
+      additionalModules: [touchInteractionModule, minimapModule],
+    });
+
+    const editorStatus = document.getElementById('editor-status');
+    const viewerStatus = document.getElementById('viewer-status');
+    const setStatus = (el, text) => { el.textContent = text; };
+
+    let syncTimer = null;
+    function scheduleSync() {
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(syncViewer, 200);
+    }
+
+    async function syncViewer() {
+      try {
+        const { xml } = await modeler.saveXML({ format: false });
+        await viewer.importXML(xml);
+        fitWithPaletteMargin(viewer, 0);
+        setStatus(viewerStatus, 'Synced · ' + new Date().toLocaleTimeString());
+      } catch (err) {
+        console.error('Sync failed', err);
+        setStatus(viewerStatus, 'Sync error: ' + err.message);
+      }
+    }
+
+    function fitWithPaletteMargin(inst, marginLeft = 0) {
+      const canvas = inst.get('canvas');
+      canvas.zoom('fit-viewport', 'auto');
+      if (marginLeft) {
+        const vb = canvas.viewbox();
+        canvas.viewbox({ ...vb, x: vb.x - marginLeft / (vb.scale || 1) });
+      }
+    }
+
+    async function loadInitial() {
+      try {
+        await modeler.importXML(INITIAL_DIAGRAM);
+        fitWithPaletteMargin(modeler, 80);
+        await syncViewer();
+        setStatus(editorStatus, 'Ready · edit me');
+      } catch (err) {
+        console.error('Initial load failed', err);
+        setStatus(editorStatus, 'Load error: ' + err.message);
+      }
+    }
+
+    modeler.on('commandStack.changed', scheduleSync);
+
+    document.getElementById('reset').addEventListener('click', loadInitial);
+
+    let minimapsOpen = false;
+    function setMinimaps(open) {
+      minimapsOpen = open;
+      for (const inst of [modeler, viewer]) {
+        const minimap = inst.get('minimap');
+        if (open) minimap.open(); else minimap.close();
+      }
+    }
+
+    document.getElementById('toggle-minimap').addEventListener('click', () => {
+      setMinimaps(!minimapsOpen);
+    });
+
+    const ZOOM_STEP = 1.2;
+    const ZOOM_MIN = 0.2;
+    const ZOOM_MAX = 4;
+    function zoomBy(factor) {
+      for (const inst of [modeler, viewer]) {
+        const canvas = inst.get('canvas');
+        const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, canvas.zoom() * factor));
+        canvas.zoom(next, 'auto');
+      }
+    }
+    document.getElementById('zoom-in').addEventListener('click', () => zoomBy(ZOOM_STEP));
+    document.getElementById('zoom-out').addEventListener('click', () => zoomBy(1 / ZOOM_STEP));
+    document.getElementById('zoom-fit').addEventListener('click', () => {
+      fitWithPaletteMargin(modeler, 80);
+      fitWithPaletteMargin(viewer, 0);
+    });
+
+    const coarseMQ = window.matchMedia('(pointer: coarse)');
+    const pluginActivatedAt = coarseMQ.matches;
+    const badge = document.getElementById('touch-badge');
+    const hint = document.getElementById('inactive-hint');
+
+    function updateTouchStatus() {
+      const current = coarseMQ.matches;
+      badge.textContent = 'Touch: ' + (current ? 'active' : 'inactive');
+      badge.classList.toggle('active', current);
+      badge.classList.toggle('inactive', !current);
+      const mismatch = current !== pluginActivatedAt;
+      hint.style.display = (!current || mismatch) ? 'block' : 'none';
+      hint.classList.toggle('needs-reload', mismatch);
+    }
+
+    coarseMQ.addEventListener('change', updateTouchStatus);
+    window.addEventListener('resize', updateTouchStatus);
+    window.addEventListener('orientationchange', updateTouchStatus);
+    document.getElementById('reload-btn').addEventListener('click', () => location.reload());
+    updateTouchStatus();
+
+    (async () => {
+      await loadInitial();
+      setMinimaps(true);
+    })();
+  </script>
+</body>
+</html>

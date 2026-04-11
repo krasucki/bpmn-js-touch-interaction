@@ -1,6 +1,6 @@
 {
   "name": "bpmn-js-touch-interaction",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Restores tap, pan, pinch and drag gestures on touch devices for bpmn-js 18+",
   "type": "module",
   "main": "./dist/bpmn-js-touch-interaction.esm.js",
@@ -26,6 +26,7 @@
     "test:coverage": "vitest run --coverage",
     "clean": "rimraf dist",
     "build": "rollup -c",
+    "example": "npx --yes serve -l 8000 .",
     "all": "npm run lint && npm run test && npm run build",
     "check:upstream": "node scripts/check-upstream.mjs",
     "check:upstream:update": "node scripts/check-upstream.mjs --update",

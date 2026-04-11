@@ -34,6 +34,18 @@ const { default: touchInteractionModule } =
   await import('bpmn-js-touch-interaction');
 ```
 
+## Example
+
+A runnable `Modeler` + `NavigatedViewer` example with auto-sync, minimap, and
+zoom controls lives in [`examples/index.html`](./examples/index.html).
+
+```bash
+npm run build     # build dist/ once
+npm run example   # serves repo root on http://localhost:8000
+```
+
+Then open <http://localhost:8000/examples/index.html>.
+
 ## TLDR;
 
 bpmn-js dropped touch support in v14 (May 2024) when the HammerJS-based
