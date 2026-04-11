@@ -134,19 +134,6 @@
       min-height: 0;
       background: #fff;
     }
-    .status {
-      position: absolute;
-      bottom: 8px;
-      left: 8px;
-      background: rgba(255, 255, 255, 0.92);
-      padding: 4px 10px;
-      font-size: 11px;
-      color: #4a5568;
-      border-radius: 4px;
-      pointer-events: none;
-      z-index: 10;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    }
     #file-protocol-warning {
       display: none;
       padding: 20px;
@@ -248,15 +235,11 @@ npm run example   # serves on http://localhost:8000</pre>
   <div class="panels">
     <section class="panel">
       <div class="panel-label">Modeler (touch + minimap)</div>
-      <div id="editor-canvas" class="canvas">
-        <div class="status" id="editor-status">Loading…</div>
-      </div>
+      <div id="editor-canvas" class="canvas"></div>
     </section>
     <section class="panel">
-      <div class="panel-label">NavigatedViewer (auto-synced)</div>
-      <div id="viewer-canvas" class="canvas">
-        <div class="status" id="viewer-status">Loading…</div>
-      </div>
+      <div class="panel-label">NavigatedViewer</div>
+      <div id="viewer-canvas" class="canvas"></div>
     </section>
   </div>
 
@@ -326,28 +309,6 @@ npm run example   # serves on http://localhost:8000</pre>
       additionalModules: [touchInteractionModule, minimapModule],
     });
 
-    const editorStatus = document.getElementById('editor-status');
-    const viewerStatus = document.getElementById('viewer-status');
-    const setStatus = (el, text) => { el.textContent = text; };
-
-    let syncTimer = null;
-    function scheduleSync() {
-      clearTimeout(syncTimer);
-      syncTimer = setTimeout(syncViewer, 200);
-    }
-
-    async function syncViewer() {
-      try {
-        const { xml } = await modeler.saveXML({ format: false });
-        await viewer.importXML(xml);
-        fitWithPaletteMargin(viewer, 0);
-        setStatus(viewerStatus, 'Synced · ' + new Date().toLocaleTimeString());
-      } catch (err) {
-        console.error('Sync failed', err);
-        setStatus(viewerStatus, 'Sync error: ' + err.message);
-      }
-    }
-
     function fitWithPaletteMargin(inst, marginLeft = 0) {
       const canvas = inst.get('canvas');
       canvas.zoom('fit-viewport', 'auto');
@@ -358,18 +319,13 @@ npm run example   # serves on http://localhost:8000</pre>
     }
 
     async function loadInitial() {
-      try {
-        await modeler.importXML(INITIAL_DIAGRAM);
-        fitWithPaletteMargin(modeler, 80);
-        await syncViewer();
-        setStatus(editorStatus, 'Ready · edit me');
-      } catch (err) {
-        console.error('Initial load failed', err);
-        setStatus(editorStatus, 'Load error: ' + err.message);
-      }
+      await Promise.all([
+        modeler.importXML(INITIAL_DIAGRAM),
+        viewer.importXML(INITIAL_DIAGRAM),
+      ]);
+      fitWithPaletteMargin(modeler, 80);
+      fitWithPaletteMargin(viewer, 0);
     }
-
-    modeler.on('commandStack.changed', scheduleSync);
 
     document.getElementById('reset').addEventListener('click', loadInitial);
 
